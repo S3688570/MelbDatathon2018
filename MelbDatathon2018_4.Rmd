@@ -1,0 +1,440 @@
+---
+title: "Melbourne Datathon 2018"
+author: "Charles Galea (s3688570)"
+date: "Sept 2018"
+output:
+  html_document:
+    df_print: paged
+    toc: yes
+    toc_depth: '3'
+  pdf_document:
+    fig_caption: yes
+    number_sections: yes
+    toc: no
+    toc_depth: 3
+linkcolor: blue
+references:
+- author:
+  - family: Aksakalli
+    given: Vural
+  - family: Malekipirbazai
+    given: Milad
+  id: Aksakalli
+  issued:
+  - year: 2016
+  pages: 41-47
+  publisher: Pattern Rceognition Letters
+  title: 'Feature Selection via Binary Simultaneous Perturbation Stochastic Approximation'
+  volume: 75
+- author:
+  - family: Xie
+    given: YiHui
+    issued:
+    - year: 2015
+  publisher: Chapman and Hall/CRC
+  title: 'Dynamic Documents with R and knitr'
+  id: knitr
+- author:
+  - family: Breiman
+    given: L.
+  id: Breiman
+  issued:
+  - year: 2001
+  pages: 5-32
+  publisher: Machine Learning
+  title: Random Forests
+  volume: 45(1)
+- author:
+  - family: Bischl
+    given: Bernd
+  - family: Lang
+    given: Michel
+  - family: Kotthoff
+    given: Lars
+  - family: Schiffner
+    given: Julia
+  - family: Richter
+    given: Jakob
+  - family: Studerus
+    given: Erich
+  - family: Casalicchio
+    given: Giuseppe
+  - family: Jones
+    given: Zachary M.
+  id: mlr
+  issued:
+  - year: 2016
+  pages: 1-5
+  publisher: Journal of Machine Learning Research
+  title: '`mlr`: Machine Learning in R'
+  url: http://jmlr.org/papers/v17/15-066.html
+  volume: 17
+subtitle: MATH 2319 Machine Learning Applied Project Phase II
+documentclass: article
+---
+
+
+\newpage
+
+\tableofcontents
+
+
+<!-- -->
+
+
+\newpage
+
+# Introduction \label{sec1}
+
+The objective of this project was to build classifiers to predict whether a tram/bus or train stop will be busy at a particular time of day. The data were obtained from the Public Transport Victoria and was comprised of MYKI touch on touch off transactions for the previous 3 years. The target feature was based on the number of transactions at given times of the day and were categorized as busy, slightly busy or not busy.
+
+## Descriptive Features
+
+* Calendar Year
+* Financial Year
+* Financial Month
+* Calendar Month
+* CalendarMonthSeq
+* CalendarQuarter
+* FinancialQuarter
+* CalendarWeek
+* DayType
+* DayTypeCategory
+* WeekdaySeq
+* WeekDay
+* FinancialMonthSeq
+* FinancialMonthName
+* MonthNumber 
+* ABSWeek
+* QuarterName
+* Card_SubType_ID
+* Card_SubType_Desc
+* Payment_Type
+* Fare_Type
+* Concession_Type
+* MI_Card_Group
+* StopLocationID
+* StopNameShort
+* StopNameLong
+* StopType
+* SuburbName
+* PostCode
+* RegionName
+* LocalGovernmentArea
+* StatDivision
+* GPSLat
+* GPSLong
+* Mode
+* BusinessDate    
+* DateTime    
+* CardID    
+* CardType    
+* VehicleID    
+* ParentRoute    
+* RouteID    
+* StopID    
+
+The target feature has three classes busy, slightly busy or not busy. To reiterate, the goal is to predict **whether a stop is busy at a particular time of the day**.
+
+
+# Methodology
+
+We considered three classifiers - Naive Bayes (NB), Random Forest (RF), and $K$-Nearest Neighbour (KNN). The NB was the baseline classifier. Each classifier was trained to make probability predictions so that we were able to adjust the prediction threshold to refine the performance. We split the full data set into a 70 % training set and 30 % test set. Each set resembled the full data by having the same proportion of target classes i.e. approximately 45 % of patients having sign heart disease and 55 % exhibiting symptoms of heart disease. For the fine-tuning process, we ran five-folded cross-validation stratified sampling on each classifier. Stratified sampling was used to cater for the slight class imbalance of the target feature.
+
+Next, for each classifer, we determined the optimal probability threshold. Using the tuned hyperparameters and the optimal thresholds, we made predictions on the test data. During model training (hyperparameter tuning and threshold adjustment), we relied on mean misclassification error rate (mmce). In addition to mmce, we also used the confusion matrix on the test data to evaluate the classifiers' performance. The modelling was implemented in `R` with the `mlr` package. @mlr
+
+# Hyperparameter Fine-Tuning
+
+### Naive Bayes
+
+Since the training set might have unwittingly excluded rare instances, the NB classifier may produce some fitted zero probabilities as predictions. To mitigate this, we ran a grid search to determine the optimal value of the Laplacian smoothing parameter. Using the stratified sampling discussed in the previous section, we experimented using values ranging from 0 to 30.
+
+The optimal Laplacian parameter was 10 with a mean test error of 0.205.
+
+### Random Forest
+
+We tune-fined the number of variables randomly sampled as candidates at each split (i.e. `mtry`). For a classification problem, @Breiman suggests `mtry` = $\sqrt{p}$ where $p$ is the number of descriptive features. In our case, $\sqrt{p} = \sqrt{11}=3.31$. Therefore, we experimented with `mtry` = 2, 3, and 4. We left other hyperparameters, such as the number of trees to grow at the default value. The result was a mtry value of 2 with a mean test error of 0.193.
+
+### $K$-Nearest Neighbours
+
+By using the optimal kernel, we ran a grid search on $k=2,3,...20$. The outcome was k of 20 and mmce test error of 0.199.
+
+## Feature Selection
+
+Feature selection was used to identify an optimal subset of the available features. Selecting a subset of relevant features can make machine learning algorithm training faster, reduce complexity of the model, improve accuracy and reduce overfitting.There are three broard categoried of feature selection methods: filter methods, wrapper methods and embedded methods.  
+
+### Simultaneous Perturbation Stochastic Approximation for Feature Selection and Ranking (SPSA-FSR Algorithm)
+
+The SPSA-FSR wrapper method was used to select for relevant features (https://cran.r-project.org/web/packages/spFSR/vignettes/spFSR.html). @Aksakalli
+
+### Filter method
+
+The fiter method assigns an importance value to each feature. Based on these values the features are ranked and a feature subset is selected. The learner was fused with the filter method for training of each classification model.
+
+### Wrapper method
+
+The wrapper method used the performance of a learning classifier to access the usefulness of the feature set. In order to select a feature subset the learner was trained repeatedly on different fleature subsets and the subset which lead to the best learner performance was chosen.
+
+# Install and load required libraries
+# Install.packages('data.table')
+
+
+```{r, message = FALSE, warning=FALSE}
+Sys.setenv(JAVA_HOME='C:\\Program Files\\Java\\jre-9.0.4')
+library(dplyr)
+library(readr)
+library(tidyverse)
+library(mlr)
+library(tidyverse) # for ggplot and data wrangly
+library(rJava)
+library(FSelector) 
+library(ggplot2)
+library(gridExtra)
+library(gmodels)
+library(GGally)
+library(cowplot)
+library(tidyr)
+library(magrittr)
+library(moments)
+library(purrr)
+library(data.table)
+library(latex2exp)
+library(caret)
+library(robustHD)
+library(spFSR)
+library(rjson)
+library(party)
+library(knitr)
+library(kableExtra)
+library(stringr)
+library(mlbench)
+library(e1071)
+library(MASS)
+library(ggmap)
+set.seed(999) 
+```
+
+# Load Calander Dataset
+```{r}
+calendar <- fread('D:/Datathon/MelbDatathon2018/calendar.txt')
+colnames(calendar) <- c('', 'Date', 'CalendarYear', 'FinancialYear', 'FinancialMonth', 'CalendarMonth', 'CalendarMonthSeq', 'CalendarQuarter', 'FinancialQuarter', 'CalendarWeek', 'FinancialWeek', 'DayType', 'DayTypeCategory', 'WeekdaySeq', 'WeekDay', 'Day', 'FinancialMonthSeq', 'FinancialMonthName', 'MonthNumber', 'ABSWeek', 'WeekEnding', 'QuarterName')
+calendar <- calendar[,-1]
+```
+
+
+# Load Card Types Dataset
+```{r}
+card_types <- fread('D:/Datathon/MelbDatathon2018/card_types.txt')
+colnames(card_types) <- c('CardType', 'Card_SubType_Desc', 'Payment_Type', 'Fare_Type', 'Concession_Type', 'MI_Card_Group')
+```
+
+# Load Stop Locations dataset
+```{r}
+stop_loc <- fread('D:/Datathon/MelbDatathon2018/stop_locations.txt')
+colnames(stop_loc) <- c('StopID', 'StopNameShort', 'StopNameLong', 'StopType', 'SuburbName', 'PostCode', 'RegionName', 'LocalGovernmentArea', 'StatDivision', 'GPSLat', 'GPSLong')
+```
+
+#tell R where it can find the data
+```{r}
+ScanOnFolderMaster <- 'D:/Datathon/MelbDatathon2018/Samp_X/ScanOnTransaction'
+ScanOffFolderMaster <- 'D:/Datathon/MelbDatathon2018/Samp_X/ScanOffTransaction'
+
+mySamp <- 0
+
+ScanOnFolder <- sub("X",mySamp,ScanOnFolderMaster)
+ScanOffFolder <- sub("X",mySamp,ScanOffFolderMaster)
+```
+
+#list the files
+```{r}
+onFiles <- list.files(ScanOnFolder,recursive = TRUE,full.names = TRUE, pattern = "\\.txt$")
+offFiles <- list.files(ScanOffFolder,recursive = TRUE,full.names = TRUE, pattern = "\\.txt$")
+```
+
+
+#how many
+```{r}
+allFiles <- union(onFiles,offFiles)
+cat("\nthere are", length(allFiles),'files')
+```
+
+#------------------------------------
+#read in a file and take a look
+#------------------------------------
+```{r}
+myFile <- onFiles[101]
+#cmd <- paste0("gzip -dc ", myFile)
+dt <- fread(myFile, nrow=20000, na.strings="")
+```
+
+#these are the column names
+```{r}
+dt <- dt
+colnames(dt) <- c('Mode','Date','DateTime','CardID','CardType','VehicleID','ParentRoute','RouteID','StopID')
+```
+
+#----------------------------------------
+# scan through the files and extract
+# a sample of specific rows and columns
+#----------------------------------------
+```{r}
+first <- TRUE
+count <- 0
+```
+
+
+# Randomly select 20 files
+
+```{r}
+#myFiles <- onFiles[1:5]
+myFiles <- sample(onFiles, 10, replace = FALSE)
+#myFiles <- sample(onFiles)
+
+for (myOn in myFiles){
+
+  #cmd <- paste0("gzip -dc ", myOn)
+  
+  #grab only 3 columns
+  #dt <- fread(myOn,select = c(3,4,9))
+  dt <- fread(myOn, na.strings="")
+  
+  #create a sample based on column 4 values
+  #note the samples are already sampled!
+  #dt <- subset(dt, V4 %% 100 == mySamp)
+  dt_train <- subset(dt, V1 == 2)
+  #dt_tram <- subset(dt, V1 == 3)
+  #dt_bus <- subset(dt, V1 == 1)
+  #dt_train <- subset(dt_train, V7 != "Headless Mode")
+ 
+  #stack the records together
+  if (first == TRUE){
+    allON <- dt_train[sample(nrow(dt_train), 20000), ]
+    first <- FALSE
+  } else {
+    l = list(dt_train,allON)
+    allON <- rbindlist(l)
+  }
+  
+  count <- count + 1
+  cat('\n',count,' of ',length(myFiles))
+
+}
+
+
+cat('\n there are ', format(nrow(allON),big.mark = ","),'rows')
+
+colnames(allON) <- c('Mode','Date','DateTime','CardID','CardType','VehicleID','ParentRoute','RouteID','StopID')
+
+allON
+summary(allON)
+```
+
+# Summary of allON table
+```{r}
+summ <- summarizeColumns(allON)
+kable(summ, caption = "Table 1. Feature summary for Train dataset") %>% kable_styling(bootstrap_options = c("condensed", full_width = F), font_size = 10)
+```
+
+# Remove Mode, ParentRoute and VehicleID features
+```{r}
+allON <- allON[,-c(6,7)]
+allON <- allON[,-1]
+```
+
+
+#one field is clearly a date time
+```{r}
+allON[,DateTime := as.POSIXct(DateTime,tz='Australia/Sydney')]
+allON[,unixTime := as.numeric(DateTime)]
+```
+
+# Combine dt and Card Type datasets
+```{r}
+allON_card <- left_join(allON, card_types, by = "CardType")
+```
+
+# Combine with Stop Locations dataset
+```{r}
+allON_card_Loc <- left_join(allON_card, stop_loc, by = "StopID")
+allON_card_Loc <- subset(allON_card_Loc, allON_card_Loc$StatDivision == "Greater Metro")
+```
+
+# Combine with Calendar dataset
+```{r}
+allON_card_Loc_Cal <- left_join(allON_card_Loc, calendar, by = "Date")
+```
+
+# Dimensions of entire dataset
+```{r}
+dim(allON_card_Loc_Cal)
+```
+
+# Determine the number of tap on transactions at each Stop along each Route per Hour.
+```{r}
+meta <- allON_card_Loc_Cal %>% group_by(DateTime, FinancialMonth, FinancialWeek, WeekDay, Hour = cut(allON_card_Loc_Cal$DateTime, breaks= "1 hour", labels=FALSE, ordered_result = TRUE), RouteID, StopID) %>% summarize(Number = n())
+```
+
+# Add location data and stop type to table
+```{r}
+loc <- data.frame(StopID = stop_loc$StopID, StopType = stop_loc$StopType, SuburbName = stop_loc$SuburbName, PostCode = stop_loc$PostCode, LocalGovernmentArea = stop_loc$LocalGovernmentArea)
+```
+
+# Combine transaction (meta) table with vehicleID (vech) and stop (loc) tables
+```{r}
+meta_loc <- left_join(meta, loc, by = "StopID")
+```
+
+
+```{r}
+#allTrains <- allON[allON$Mode == 2, ] 
+#allTrains
+
+stop_trans <- meta_loc[meta_loc$StopID == 19882, ]
+#flinders
+#sort(flinders$DateTime)
+sort(stop_trans$DateTime)
+allONBreaks <- data.frame(stop_trans, cuts = cut(stop_trans$DateTime, breaks= "1 hour", labels=FALSE, ordered_result = TRUE))
+allONBreaks
+```
+
+```{r}
+myDates <- table(cut(stop_trans$DateTime, breaks = "hour"))
+myDatesN <- as.data.frame(myDates)
+myDatesN
+plot(myDates, type="l", xlab="DateTime", ylab="Freq")
+```
+
+```{r}
+summary(myDates)
+```
+
+#myDatesN$Freq
+#myDatesN$Var1
+
+```{r}
+vec <- rep(myDatesN$Freq)
+vec = as.numeric(vec)
+
+MydatesNew <- cbind(myDatesN,vec)
+MydatesNew
+```
+
+
+```{r}
+MydatesNew_No <- subset(MydatesNew, MydatesNew$Freq != 0)
+
+ggplot(MydatesNew_No, aes(, y=MydatesNew_No$Freq)) + geom_boxplot()
+```
+
+```{r}
+counts <- 0
+for(status in MydatesNew){
+status <- ifelse(MydatesNew$vec >200, "Busy", ifelse(MydatesNew$vec < 200 & MydatesNew$vec >60 , "Slightly Busy", "Not Busy"))
+}
+
+mynewDates <- cbind(MydatesNew, status) 
+mynewDates
+```
+
+
+
