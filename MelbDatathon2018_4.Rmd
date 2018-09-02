@@ -287,7 +287,7 @@ count <- 0
 
 ```{r}
 #myFiles <- onFiles[1:5]
-myFiles <- sample(onFiles, 10, replace = FALSE)
+myFiles <- sample(onFiles, 2, replace = FALSE)
 #myFiles <- sample(onFiles)
 
 for (myOn in myFiles){
@@ -382,19 +382,48 @@ loc <- data.frame(StopID = stop_loc$StopID, StopType = stop_loc$StopType, Suburb
 # Combine transaction (meta) table with vehicleID (vech) and stop (loc) tables
 ```{r}
 meta_loc <- left_join(meta, loc, by = "StopID")
+#meta_loc2 <- meta_loc[1:1000,]
 ```
 
 
 ```{r}
 #allTrains <- allON[allON$Mode == 2, ] 
 #allTrains
+x <- TRUE
+while (length(meta_loc$StopID) >= 1) {
+  num <- meta_loc[1, 'StopID']
+  num <- as.numeric(num)
+  stop_trains <- meta_loc[meta_loc$StopID == num, ]
+  sort(stop_trains$DateTime)
+  allONBreaks <- data.frame(stop_trains, cuts = cut(stop_trains$DateTime, breaks= "1 hour", labels=FALSE, ordered_result = TRUE))
+  myDates <- table(cut(allONBreaks$DateTime, breaks = "hour"))
+  myDatesN <- as.data.frame(myDates)
+  myDatesN <- merge(myDatesN, stop_trains)
+  #vec <- rep(myDatesN$Freq)
+  #vec <-  as.numeric(vec)
+  #MydatesNew <- cbind(myDatesN,vec)
+  #myDatesN <- as.data.frame(myDatesN)
+  #allONBreaks <- as.data.frame(allONBreaks)
+  #newDat <- merge(myDatesN, allONBreaks)
 
-stop_trans <- meta_loc[meta_loc$StopID == 19882, ]
+  if (x == TRUE) {
+    all_comb <- myDatesN
+    x <- FALSE
+  } else {
+    all_comb <- rbind(all_comb, myDatesN)
+  }
+  meta_loc2 <- meta_loc2[meta_loc2$StopID != num, ]
+  }
+  
+ 
+
+
+
 #flinders
 #sort(flinders$DateTime)
-sort(stop_trans$DateTime)
-allONBreaks <- data.frame(stop_trans, cuts = cut(stop_trans$DateTime, breaks= "1 hour", labels=FALSE, ordered_result = TRUE))
-allONBreaks
+#sort(stop_trans$DateTime)
+#allONBreaks <- data.frame(stop_trans, cuts = cut(stop_trans$DateTime, breaks= "1 hour", labels=FALSE, ordered_result = TRUE))
+#allONBreaks
 ```
 
 ```{r}
