@@ -287,7 +287,7 @@ count <- 0
 
 ```{r}
 #myFiles <- onFiles[1:5]
-myFiles <- sample(onFiles, 2, replace = FALSE)
+myFiles <- sample(onFiles, 5, replace = FALSE)
 #myFiles <- sample(onFiles)
 
 for (myOn in myFiles){
@@ -308,7 +308,7 @@ for (myOn in myFiles){
  
   #stack the records together
   if (first == TRUE){
-    allON <- dt_train[sample(nrow(dt_train), 20000), ]
+    allON <- dt_train[sample(nrow(dt_train), 5000), ]
     first <- FALSE
   } else {
     l = list(dt_train,allON)
@@ -382,7 +382,7 @@ loc <- data.frame(StopID = stop_loc$StopID, StopType = stop_loc$StopType, Suburb
 # Combine transaction (meta) table with vehicleID (vech) and stop (loc) tables
 ```{r}
 meta_loc <- left_join(meta, loc, by = "StopID")
-#meta_loc2 <- meta_loc[1:1000,]
+meta_loc2 <- meta_loc[1:1000,]
 ```
 
 
@@ -390,10 +390,10 @@ meta_loc <- left_join(meta, loc, by = "StopID")
 #allTrains <- allON[allON$Mode == 2, ] 
 #allTrains
 x <- TRUE
-while (length(meta_loc$StopID) >= 1) {
-  num <- meta_loc[1, 'StopID']
+while (length(meta_loc2$StopID) >= 1) {
+  num <- meta_loc2[1, 'StopID']
   num <- as.numeric(num)
-  stop_trains <- meta_loc[meta_loc$StopID == num, ]
+  stop_trains <- meta_loc2[meta_loc2$StopID == num, ]
   sort(stop_trains$DateTime)
   allONBreaks <- data.frame(stop_trains, cuts = cut(stop_trains$DateTime, breaks= "1 hour", labels=FALSE, ordered_result = TRUE))
   myDates <- table(cut(allONBreaks$DateTime, breaks = "hour"))
@@ -427,43 +427,20 @@ while (length(meta_loc$StopID) >= 1) {
 ```
 
 ```{r}
-myDates <- table(cut(stop_trans$DateTime, breaks = "hour"))
-myDatesN <- as.data.frame(myDates)
-myDatesN
-plot(myDates, type="l", xlab="DateTime", ylab="Freq")
-```
-
-```{r}
-summary(myDates)
-```
-
-#myDatesN$Freq
-#myDatesN$Var1
-
-```{r}
-vec <- rep(myDatesN$Freq)
-vec = as.numeric(vec)
-
-MydatesNew <- cbind(myDatesN,vec)
-MydatesNew
-```
-
-
-```{r}
-MydatesNew_No <- subset(MydatesNew, MydatesNew$Freq != 0)
-
-ggplot(MydatesNew_No, aes(, y=MydatesNew_No$Freq)) + geom_boxplot()
+ggplot(all_comb, aes(x = all_comb$Freq)) + geom_histogram(fill = "cyan", colour = "black")
 ```
 
 ```{r}
 counts <- 0
-for(status in MydatesNew){
-status <- ifelse(MydatesNew$vec >200, "Busy", ifelse(MydatesNew$vec < 200 & MydatesNew$vec >60 , "Slightly Busy", "Not Busy"))
+for(status in all_comb){
+status <- ifelse(all_comb$Freq >= 15, "Busy", ifelse(all_comb$vec < 15 & all_comb$vec > 7 , "Slightly Busy", "Not Busy"))
 }
 
-mynewDates <- cbind(MydatesNew, status) 
+mynewDates <- cbind(all_comb, status) 
 mynewDates
 ```
+
+
 
 
 
