@@ -382,7 +382,7 @@ loc <- data.frame(StopID = stop_loc$StopID, StopType = stop_loc$StopType, Suburb
 # Combine transaction (meta) table with vehicleID (vech) and stop (loc) tables
 ```{r}
 meta_loc <- left_join(meta, loc, by = "StopID")
-meta_loc2 <- meta_loc[1:1000,]
+meta_loc2 <- meta_loc[1:5000,]
 ```
 
 
@@ -394,7 +394,8 @@ while (length(meta_loc2$StopID) >= 1) {
   num <- meta_loc2[1, 'StopID']
   num <- as.numeric(num)
   stop_trains <- meta_loc2[meta_loc2$StopID == num, ]
-  sort(stop_trains$DateTime)
+  #stop_trains <- stop_trains[order(stop_trains$DateTime),]
+  #sort(stop_trains$DateTime)
   allONBreaks <- data.frame(stop_trains, cuts = cut(stop_trains$DateTime, breaks= "1 hour", labels=FALSE, ordered_result = TRUE))
   myDates <- table(cut(allONBreaks$DateTime, breaks = "hour"))
   myDatesN <- as.data.frame(myDates)
@@ -427,17 +428,22 @@ while (length(meta_loc2$StopID) >= 1) {
 ```
 
 ```{r}
-ggplot(all_comb, aes(x = all_comb$Freq)) + geom_histogram(fill = "cyan", colour = "black")
+ggplot(all_comb, aes(x = all_comb$Freq)) + geom_histogram(fill = "cyan", colour = "black") + labs(x = "Number of MYKI Transactions", y = "Frequency")
 ```
 
 ```{r}
 counts <- 0
 for(status in all_comb){
-status <- ifelse(all_comb$Freq >= 15, "Busy", ifelse(all_comb$vec < 15 & all_comb$vec > 7 , "Slightly Busy", "Not Busy"))
+status <- ifelse(all_comb$Freq >= 20, "Busy", ifelse(all_comb$Freq < 20 & all_comb$Freq > 10 , "Slightly Busy", "Not Busy"))
 }
 
 mynewDates <- cbind(all_comb, status) 
 mynewDates
+write.csv(mynewDates, file = "InputML.csv")
+```
+
+```{r}
+ggplot(mynewDates, aes(x = mynewDates$Freq, fill = mynewDates$status)) + geom_histogram(colour = "black") + labs(x = "Number of MYKI Transactions", y = "Frequency")
 ```
 
 
