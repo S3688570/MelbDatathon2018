@@ -287,7 +287,7 @@ count <- 0
 
 ```{r}
 #myFiles <- onFiles[1:5]
-myFiles <- sample(onFiles, 5, replace = FALSE)
+myFiles <- sample(onFiles, 10, replace = FALSE)
 #myFiles <- sample(onFiles)
 
 for (myOn in myFiles){
@@ -308,7 +308,7 @@ for (myOn in myFiles){
  
   #stack the records together
   if (first == TRUE){
-    allON <- dt_train[sample(nrow(dt_train), 5000), ]
+    allON <- dt_train[sample(nrow(dt_train), 3000), ]
     first <- FALSE
   } else {
     l = list(dt_train,allON)
@@ -382,7 +382,8 @@ loc <- data.frame(StopID = stop_loc$StopID, StopType = stop_loc$StopType, Suburb
 # Combine transaction (meta) table with vehicleID (vech) and stop (loc) tables
 ```{r}
 meta_loc <- left_join(meta, loc, by = "StopID")
-meta_loc2 <- meta_loc[1:5000,]
+#meta_loc2 <- meta_loc[1:5000,]
+meta_loc2 <- meta_loc[sample(nrow(meta_loc), 300), ]
 ```
 
 
@@ -390,7 +391,7 @@ meta_loc2 <- meta_loc[1:5000,]
 #allTrains <- allON[allON$Mode == 2, ] 
 #allTrains
 x <- TRUE
-while (length(meta_loc2$StopID) >= 1) {
+while (length(meta_loc2$StopID) >= 2) {
   num <- meta_loc2[1, 'StopID']
   num <- as.numeric(num)
   stop_trains <- meta_loc2[meta_loc2$StopID == num, ]
@@ -434,7 +435,7 @@ ggplot(all_comb, aes(x = all_comb$Freq)) + geom_histogram(fill = "cyan", colour 
 ```{r}
 counts <- 0
 for(status in all_comb){
-status <- ifelse(all_comb$Freq >= 20, "Busy", ifelse(all_comb$Freq < 20 & all_comb$Freq > 10 , "Slightly Busy", "Not Busy"))
+status <- ifelse(all_comb$Freq >= 15, "Busy", ifelse(all_comb$Freq < 15 & all_comb$Freq > 5 , "Slightly Busy", "Not Busy"))
 }
 
 mynewDates <- cbind(all_comb, status) 
