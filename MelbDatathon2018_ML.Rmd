@@ -101,6 +101,9 @@ library(tidyverse)
 library(ggplot2)
 library(latex2exp)
 library(cowplot)
+library(egg)
+library(gridExtra)
+library(grid)
 data <- read.csv('inputML.csv', stringsAsFactors = FALSE)
 data <- data[,-1]
 #data[, sapply(data, is.character)] <- lapply( data[, sapply(data, is.character )], factor) 
@@ -118,66 +121,42 @@ summarizeColumns(data) %>% knitr::kable( caption =  'Feature Summary')
 sapply(data, function(x) sum(is.na(x)))
 ```
 
-```{r echo = FALSE}
-p1 <- ggplot(data, aes(x = Slope)) + geom_bar() + theme(axis.text.x = element_text(angle = 90, hjust = 1)) + xlab("Slope") + theme(axis.title.y=element_text(size=20,face="bold"))
+# Removed Var1, Freq, DateTime and StopType features.
+```{r}
+data <- data[,-c(1:3, 11)]
+glimpse(data)
+```
 
-p2 <- ggplot(data, aes(x = Thal)) + geom_bar() + theme(axis.text.x = element_text(angle = 90, hjust = 1)) + xlab("beta-Thalassemia cardiomyopathy") + theme(axis.title.y=element_text(size=20,face="bold"))
+```{r echo = FALSE, fig.width=10, fig.height=10}
+p1 <- ggplot(data, aes(x = LocalGovernmentArea, fill = status)) + geom_bar() + theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 8)) + xlab("LocalGovernmentArea") + theme(axis.title.y=element_text(size=20,face="bold"))
 
-p <- plot_grid(p1, p2)
-#label <- substitute(paste("Bar Chart for ", beta, "-Thalassemia"))
+p2 <- ggplot(data, aes(x = RouteID, fill = status)) + geom_bar() + theme(axis.title.y=element_text(size=20,face="bold"))
+
+p3 <- ggplot(data, aes(x = Hour, fill = status)) + geom_bar() + theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 8)) + xlab("Hour") + theme(axis.title.y=element_text(size=20,face="bold"))
+
+#p <- plot_grid(p1, p2, p3, p4)
+#label <- substitute(paste("Bar Charts for MYKI Transactions"))
 #title <- ggdraw() + draw_label(label, fontface='bold', size = 24)
-plot_grid(title, p, ncol = 1,  rel_heights=c(0.4, 3))
-
-```
-## Imputation
-The missing values in the Slope (slope of the peak exercise ST segment) and Thal ($\beta$-Thalassemia cardiomyopathy) features were initially imputed based on all features.
-
-```{r}
-table(data$Slope)
-table(data$Thal)
+grid.arrange(p1, p2, p3, ncol = 1, top = textGrob("Frequency of MYKI Transactions", gp = gpar(fontface = 3, fontsize = 18), hjust = 0.5, x = 0.5))
 ```
 
 ```{r}
-data_imp = impute(data, target = "Goal", cols = list(Slope = imputeLearner("classif.cforest"), Thal = imputeLearner("classif.cforest")))
-
+ggplot(data, aes(x = status)) + geom_bar() + labs(x = "Status", y = "Frequency") 
 ```
-Most of the imputed values for Slope have been assigned to 'flat' and 'unsloping' while imputed values for Thal were assigned to 'normal' and 'reversible defect'.
-
+# Update status (target) variables
 ```{r}
-table(data_imp$data$Slope)
-table(data_imp$data$Thal)
+data$status[data$status == 'Not Busy'] <- 'Not_Busy'
+data$status[data$status == 'Slightly Busy'] <- 'Slightly_Busy'
 ```
 
-## Transformation of 'ST Depression' feature
-The histogram for the 'ST Depression' feature is slightly right skewed. It was not possible to apply the box-cox transformation since the 'ST Depression' feature contained several negative values.
-
-```{r echo = FALSE}
-data_imputed <- data_imp$data
-data_imputed_filt <- data_imputed %>% filter(Oldpeak != 0)
-
-p3 <- ggplot(data_imputed, aes(x = Oldpeak)) + geom_histogram(aes(y=..density..), bins = 25, color="black", fill = "grey") + 
-  stat_function(fun = dnorm, args = list(mean = mean(data_imputed_filt$Oldpeak), sd = sd(data_imputed_filt$Oldpeak)), colour = "red", size = 0.7) + geom_vline(aes(xintercept=mean(data_imputed_filt$Oldpeak)), color="blue", linetype="dashed", size=1) + labs(x = "ST depression", y = "Density") + xlim(-0.5, 6.5) + ylim(-0.2, 2) + annotate("text", x = 4, y = 1.5, label = "Original")
-
-p4 <- ggplot(data_imputed, aes(x = "", y = Oldpeak)) + stat_boxplot(fill="slateblue", alpha=0.5, geom = "errorbar", width = 0.2) + geom_boxplot(width = 0.35, outlier.color = "blue", fill = "white") + xlab("") + ylab("ST depression") + theme(axis.text=element_text(size=10))
+# Dummify categorical variables
+```{r}
+data$SuburbName <- data$SuburbName %>%  as.factor()
+data$LocalGovernmentArea <- data$LocalGovernmentArea %>% as.factor()
+data <- createDummyFeatures(data, target = "status", method = '1-of-n')
 ```
 
-```{r echo = FALSE}
-#Cubed root transformation of Oldpeak feature
-data_imputed$Oldpeak <-  sign(data_imputed$Oldpeak) * abs(data_imputed$Oldpeak)^(1/3)
 
-#Histogram of cube root transformed data
-data_imputed_filt <- data_imputed %>% filter(Oldpeak != 0)
-p5 <- ggplot(data_imputed, aes(x = Oldpeak)) + geom_histogram(aes(y=..density..), bins = 25, color="black", fill = "grey") + 
-  stat_function(fun = dnorm, args = list(mean = mean(data_imputed_filt$Oldpeak), sd = sd(data_imputed_filt$Oldpeak)), colour = "red", size = 0.7) + geom_vline(aes(xintercept=mean(data_imputed_filt$Oldpeak)), color="blue", linetype="dashed", size=1) + labs(x = "ST depression", y = "Density") + theme_classic() + xlim(-0.5, 6.5) + ylim(-0.2, 2) + annotate("text", x = 4, y = 1.5, label = "Cube Root \nTranformed")
-
-p6 <- ggplot(data_imputed_filt, aes(x = "", y = Oldpeak)) + stat_boxplot(fill="slateblue", alpha=0.5, geom = "errorbar", width = 0.2) + geom_boxplot(width = 0.35, outlier.color = "blue", fill = "white") + xlab("") + ylab("ST depression") + theme(axis.text=element_text(size=10))
-
-p <- plot_grid(p3, p5, p4, p6)
-label <- substitute(paste("Exercise Induced ST Depression"))
-title <- ggdraw() + draw_label(label, fontface='bold', size = 24)
-plot_grid(title, p, ncol = 1,  rel_heights=c(0.4, 3))
-
-```
 
 ##Shuffle rows prior to splitting dataset
 The dataset was comprised of a combination of several datasets obtained from different hospitals. To avoid biases in the different datasets (preferences for test conducted and/or interpretation of test results) the rows in the dataset were randomized prior to splitting the data into training and test sets.
@@ -185,8 +164,8 @@ The dataset was comprised of a combination of several datasets obtained from dif
 ```{r}
 #Shuffle dataset rows
 set.seed(1234)
-n <- nrow(data_imputed)
-shuffled_data <- data_imputed[sample(n), ]
+n <- nrow(data)
+shuffled_data <- data[sample(n), ]
 ```
 
 ## Threshold Adjustment
