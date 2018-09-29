@@ -1,6 +1,6 @@
 ---
 title: "Melbourne Datathon 2018"
-author: "Charles Galea (s3688570)"
+authors: "Charles Galea (s3688570), Sean Smyth (s    ), Nicholas Davis (s    ) and  Luke Daws (s      )"
 date: "Sept 2018"
 output:
   html_document:
@@ -13,63 +13,7 @@ output:
     toc: no
     toc_depth: 3
 linkcolor: blue
-references:
-- author:
-  - family: Aksakalli
-    given: Vural
-  - family: Malekipirbazai
-    given: Milad
-  id: Aksakalli
-  issued:
-  - year: 2016
-  pages: 41-47
-  publisher: Pattern Rceognition Letters
-  title: 'Feature Selection via Binary Simultaneous Perturbation Stochastic Approximation'
-  volume: 75
-- author:
-  - family: Xie
-    given: YiHui
-    issued:
-    - year: 2015
-  publisher: Chapman and Hall/CRC
-  title: 'Dynamic Documents with R and knitr'
-  id: knitr
-- author:
-  - family: Breiman
-    given: L.
-  id: Breiman
-  issued:
-  - year: 2001
-  pages: 5-32
-  publisher: Machine Learning
-  title: Random Forests
-  volume: 45(1)
-- author:
-  - family: Bischl
-    given: Bernd
-  - family: Lang
-    given: Michel
-  - family: Kotthoff
-    given: Lars
-  - family: Schiffner
-    given: Julia
-  - family: Richter
-    given: Jakob
-  - family: Studerus
-    given: Erich
-  - family: Casalicchio
-    given: Giuseppe
-  - family: Jones
-    given: Zachary M.
-  id: mlr
-  issued:
-  - year: 2016
-  pages: 1-5
-  publisher: Journal of Machine Learning Research
-  title: '`mlr`: Machine Learning in R'
-  url: http://jmlr.org/papers/v17/15-066.html
-  volume: 17
-subtitle: MATH 2319 Machine Learning Applied Project Phase II
+subtitle: COSC 2669 Legal and Ethical Issues in Data Science
 documentclass: article
 ---
 
@@ -139,51 +83,17 @@ The target feature has three classes busy, slightly busy or not busy. To reitera
 
 # Methodology
 
-We considered three classifiers - Naive Bayes (NB), Random Forest (RF), and $K$-Nearest Neighbour (KNN). The NB was the baseline classifier. Each classifier was trained to make probability predictions so that we were able to adjust the prediction threshold to refine the performance. We split the full data set into a 70 % training set and 30 % test set. Each set resembled the full data by having the same proportion of target classes i.e. approximately 45 % of patients having sign heart disease and 55 % exhibiting symptoms of heart disease. For the fine-tuning process, we ran five-folded cross-validation stratified sampling on each classifier. Stratified sampling was used to cater for the slight class imbalance of the target feature.
+## Data pre-processing
 
-Next, for each classifer, we determined the optimal probability threshold. Using the tuned hyperparameters and the optimal thresholds, we made predictions on the test data. During model training (hyperparameter tuning and threshold adjustment), we relied on mean misclassification error rate (mmce). In addition to mmce, we also used the confusion matrix on the test data to evaluate the classifiers' performance. The modelling was implemented in `R` with the `mlr` package. @mlr
+Due to size of the dataset we initially sampled the data in order to obain a smaller, more managable, dataset. Datasets containing MYKI transactions, date/time and stop location information were combined and irrelevant features were removed. MYKI transactions at each stop per hour were determined and the final dataset was used for training several machine learning algorithms.
 
-# Hyperparameter Fine-Tuning
-
-### Naive Bayes
-
-Since the training set might have unwittingly excluded rare instances, the NB classifier may produce some fitted zero probabilities as predictions. To mitigate this, we ran a grid search to determine the optimal value of the Laplacian smoothing parameter. Using the stratified sampling discussed in the previous section, we experimented using values ranging from 0 to 30.
-
-The optimal Laplacian parameter was 10 with a mean test error of 0.205.
-
-### Random Forest
-
-We tune-fined the number of variables randomly sampled as candidates at each split (i.e. `mtry`). For a classification problem, @Breiman suggests `mtry` = $\sqrt{p}$ where $p$ is the number of descriptive features. In our case, $\sqrt{p} = \sqrt{11}=3.31$. Therefore, we experimented with `mtry` = 2, 3, and 4. We left other hyperparameters, such as the number of trees to grow at the default value. The result was a mtry value of 2 with a mean test error of 0.193.
-
-### $K$-Nearest Neighbours
-
-By using the optimal kernel, we ran a grid search on $k=2,3,...20$. The outcome was k of 20 and mmce test error of 0.199.
-
-## Feature Selection
-
-Feature selection was used to identify an optimal subset of the available features. Selecting a subset of relevant features can make machine learning algorithm training faster, reduce complexity of the model, improve accuracy and reduce overfitting.There are three broard categoried of feature selection methods: filter methods, wrapper methods and embedded methods.  
-
-### Simultaneous Perturbation Stochastic Approximation for Feature Selection and Ranking (SPSA-FSR Algorithm)
-
-The SPSA-FSR wrapper method was used to select for relevant features (https://cran.r-project.org/web/packages/spFSR/vignettes/spFSR.html). @Aksakalli
-
-### Filter method
-
-The fiter method assigns an importance value to each feature. Based on these values the features are ranked and a feature subset is selected. The learner was fused with the filter method for training of each classification model.
-
-### Wrapper method
-
-The wrapper method used the performance of a learning classifier to access the usefulness of the feature set. In order to select a feature subset the learner was trained repeatedly on different fleature subsets and the subset which lead to the best learner performance was chosen.
-
-# Install and load required libraries
-# Install.packages('data.table')
-
-
+# Install and load required R libraries
 ```{r, message = FALSE, warning=FALSE}
 Sys.setenv(JAVA_HOME='C:\\Program Files\\Java\\jre-9.0.4')
 library(dplyr)
 library(readr)
 library(tidyverse)
+library(lubridate)
 library(mlr)
 library(tidyverse) # for ggplot and data wrangly
 library(rJava)
@@ -213,6 +123,15 @@ library(e1071)
 library(MASS)
 library(ggmap)
 set.seed(999) 
+```
+
+# Load Public Holidays Dataset
+```{r}
+pubHol <- read.csv("publicHol.csv")
+```
+
+```{r}
+pubHol$Date <- ymd(pubHol$Date)
 ```
 
 # Load Calander Dataset
@@ -248,34 +167,7 @@ ScanOnFolder <- sub("X",mySamp,ScanOnFolderMaster)
 ScanOffFolder <- sub("X",mySamp,ScanOffFolderMaster)
 onFiles <- list.files(ScanOnFolder,recursive = TRUE,full.names = TRUE, pattern = "\\.txt$")
 offFiles <- list.files(ScanOffFolder,recursive = TRUE,full.names = TRUE, pattern = "\\.txt$")
-  
 ```
-
-for (file in 1:6){
-  ScanOnFolder <- sub("X",mySamp,ScanOnFolderMaster)
-  ScanOffFolder <- sub("X",mySamp,ScanOffFolderMaster)
-  onFilesSub <- list.files(ScanOnFolder,recursive = TRUE,full.names = TRUE, pattern = "\\.txt$")
-  offFilesSub <- list.files(ScanOffFolder,recursive = TRUE,full.names = TRUE, pattern = "\\.txt$")
-  
-  if (condDatON == FALSE) {
-    onFiles <- onFilesSub
-    condDatON <-  TRUE
-    mySamp <- mySamp + 2
-  } else {
-    onFiles <- c(onFiles, onFilesSub) 
-    mySamp <- mySamp + 2
-  }
-  
-  if (condDatOFF == FALSE) {
-    offFiles <- offFilesSub
-    condDatOFF <-  TRUE
-  } else {
-    offFiles <- c(offFiles, offFilesSub) 
-  }
-}
-
-
-
 
 #Determine the total number of files 
 ```{r}
@@ -283,16 +175,12 @@ allFiles <- union(onFiles,offFiles)
 cat("\nthere are", length(allFiles),'files')
 ```
 
-#----------------------------------------
-# scan through the files and extract
-# a sample of specific rows and columns
-#----------------------------------------
-
+# Take a sample of the files in the datathon dataset and then take a sample of rows from each file
 ```{r}
 #myFiles <- onFiles[1:5]
 
 # Take random sample of files and save in file named myFiles
-myFiles <- sample(onFiles, 10, replace = FALSE)
+myFiles <- sample(onFiles, 20, replace = FALSE)
 
 #Extract information for trains, trams or buses from files 
 first <- TRUE
@@ -330,8 +218,7 @@ colnames(allON) <- c('Mode','Date','DateTime','CardID','CardType','VehicleID','P
 
 # Summary of allON table
 ```{r}
-summ <- summarizeColumns(allON)
-kable(summ, caption = "Table 1. Feature summary for Train dataset") %>% kable_styling(bootstrap_options = c("condensed", full_width = F), font_size = 10)
+summary(allON)
 ```
 
 # Remove Mode, ParentRoute and VehicleID features
@@ -347,12 +234,12 @@ allON[,DateTime := as.POSIXct(DateTime,tz='Australia/Sydney')]
 allON[,unixTime := as.numeric(DateTime)]
 ```
 
-# Combine dt and Card Type datasets
+# Combine allON and Card Type datasets
 ```{r}
 allON_card <- left_join(allON, card_types, by = "CardType")
 ```
 
-# Combine with Stop Locations dataset
+# Combine with Stop Locations dataset (Greater Metro district only)
 ```{r}
 allON_card_Loc <- left_join(allON_card, stop_loc, by = "StopID")
 allON_card_Loc <- subset(allON_card_Loc, allON_card_Loc$StatDivision == "Greater Metro")
@@ -381,16 +268,11 @@ loc <- data.frame(StopID = stop_loc$StopID, StopType = stop_loc$StopType, Suburb
 # Combine transaction (meta) table with vehicleID (vech) and stop (loc) tables
 ```{r}
 meta_loc <- left_join(meta, loc, by = "StopID")
-
-#Sample the data to obtain a smaller dataset
-meta_loc2 <- meta_loc[1:3000,]
-#meta_loc2 <- meta_loc[sample(nrow(meta_loc), 200), ]
+meta_loc2 <- meta_loc[1:5000,]
 ```
 
-# Determine the frequency of MYKI transactions at each stop
+# Determine the number of MYKI transactions at each stop per hour
 ```{r}
-#allTrains <- allON[allON$Mode == 2, ] 
-#allTrains
 x <- TRUE
 while (length(meta_loc2$StopID) >= 1) {
   num <- meta_loc2[1, 'StopID']
@@ -417,21 +299,14 @@ while (length(meta_loc2$StopID) >= 1) {
   meta_loc2 <- meta_loc2[meta_loc2$StopID != num, ]
   }
   
- 
-
-
-
-#flinders
-#sort(flinders$DateTime)
-#sort(stop_trans$DateTime)
-#allONBreaks <- data.frame(stop_trans, cuts = cut(stop_trans$DateTime, breaks= "1 hour", labels=FALSE, ordered_result = TRUE))
-#allONBreaks
 ```
 
+# Plot the distribution of MYKI transactions at each stop per hour in the sampled dataset
 ```{r}
-ggplot(all_comb, aes(x = all_comb$Freq)) + geom_histogram(fill = "cyan", colour = "black") + labs(x = "Number of MYKI Transactions", y = "Frequency")
+ggplot(all_comb, aes(x = all_comb$Freq)) + geom_histogram(fill = "cyan", colour = "black")
 ```
 
+# Set a threshold of MYKI transaction per hour to define 'Busy', 'Slightly Busy' and 'Not Busy' stops
 ```{r}
 counts <- 0
 for(status in all_comb){
@@ -441,19 +316,17 @@ status <- ifelse(all_comb$Freq >= 15, "Busy", ifelse(all_comb$Freq < 15 & all_co
 mynewDates <- cbind(all_comb, status) 
 locData <- data.frame("StopID" = stop_loc$StopID, "Lat" = stop_loc$GPSLat, "Long" = stop_loc$GPSLong)
 melbDatathonData <- left_join(mynewDates, locData, by = "StopID")
-
 ```
 
+# Write output to csv file. This file will be used for training the machine learning algorithm.
 ```{r}
 write.csv(melbDatathonData, file = "melbDatathonSampleData.csv")
 ```
 
-
-
+# Plot distribution of MYKI transaction per hour highlighting the tresholds 'Busy', 'Slightly Busy' and 'Not Busy' in different colours
 ```{r}
-ggplot(melbDatathonData, aes(x = melbDatathonData$Freq, fill = melbDatathonData$status)) + geom_histogram(colour = "black") + labs(x = "Number of MYKI Transactions", y = "Frequency")
+ggplot(melbDatathonData, aes(x = melbDatathonData$Freq, fill = melbDatathonData$status)) + geom_histogram(colour = "black") + labs(x = "Number of MYKI Transactions", y = "Frequency", label = "Threshold")
 ```
-
 
 
 
